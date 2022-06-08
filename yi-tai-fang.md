@@ -6,8 +6,6 @@
 
 #### ![img](http://cdn.blocketh.top/img/4.png)
 
-![](.gitbook/assets/image.png)
-
 #### 场景
 
 * 交易树

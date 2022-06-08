@@ -1,4 +1,4 @@
-# uniswap v2
+# UniSwap v2
 
 ## swap
 

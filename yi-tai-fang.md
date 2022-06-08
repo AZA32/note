@@ -6,7 +6,7 @@
 
 #### ![img](http://cdn.blocketh.top/img/4.png)
 
-#### [http://cdn.blocketh.top/img/4.png](http://cdn.blocketh.top/img/4.png)
+![](.gitbook/assets/image.png)
 
 #### 场景
 

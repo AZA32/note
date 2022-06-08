@@ -68,7 +68,7 @@ StateRoot 数据结构是 Merkle Patric Trie(MPT)，叶子节点存储以太坊�
 | 多重签名           | ✖️   | ✔️         |
 | 控制方式           | 私钥控制 | 通过外部账户执行合约 |
 
-![image-20220402142428655](http://cdn.blocketh.top/img/image-20220402142428655.png)
+![image-20220402142428655](http://cdn.blocketh.top/img/image-20220402142428655.png) ![](http://cdn.blocketh.top/img/image-20220402142428655.png)
 
 `stateRoot`叶子节点是账户信息(addr => account)
 

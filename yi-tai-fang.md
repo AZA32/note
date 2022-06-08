@@ -4,7 +4,7 @@
 
 由压缩前缀树 Patricia Tree + 默克尔树 Merkle Tree 组成
 
-#### ![img](http://cdn.blocketh.top/img/4.png)
+#### ![img](http://cdn.blocketh.top/img/4.png) <a href="#mo-ke-erhttp-cdn.blocketh.top-img-4.png" id="mo-ke-erhttp-cdn.blocketh.top-img-4.png"></a>
 
 #### 场景
 

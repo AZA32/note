@@ -22,8 +22,25 @@
 
 #### 区块头
 
-```
-type Header struct {    ParentHash  common.Hash    `json:"parentHash"       //父块keccak哈希    UncleHash   common.Hash    `json:"sha3Uncles"       //叔块keccak哈希    Coinbase    common.Address `json:"miner"            //    Root        common.Hash    `json:"stateRoot"        //世界状态树的根哈希值    TxHash      common.Hash    `json:"transactionsRoot" //交易树的根哈希值    ReceiptHash common.Hash    `json:"receiptsRoot"     //收据树的根哈希值    Bloom       Bloom          `json:"logsBloom"        //事件地址和事件 topic 的布隆滤波器    Difficulty  *big.Int       `json:"difficulty"       //前一个区块的难度    Number      *big.Int       `json:"number"               GasLimit    uint64         `json:"gasLimit"         //当前每个区块的 gas 使用限制值    GasUsed     uint64         `json:"gasUsed"          //该区块中用于交易的 gas 消耗值    Time        uint64         `json:"timestamp"        //时间戳    Extra       []byte         `json:"extraData"        //与该区块相关的 32 字节数据    MixDigest   common.Hash    `j    // BaseFee was added by EIP-1559 and is ignored in legacy headers.    BaseFee *big.Int `json:"baseFeePerGas" rlp:"optional"`}
+```go
+type Header struct {
+	ParentHash  common.Hash    `json:"parentHash"       //父块keccak哈希
+	UncleHash   common.Hash    `json:"sha3Uncles"       //叔块keccak哈希
+	Coinbase    common.Address `json:"miner"            //
+	Root        common.Hash    `json:"stateRoot"        //世界状态树的根哈希值
+	TxHash      common.Hash    `json:"transactionsRoot" //交易树的根哈希值
+	ReceiptHash common.Hash    `json:"receiptsRoot"     //收据树的根哈希值
+	Bloom       Bloom          `json:"logsBloom"        //事件地址和事件 topic 的布隆滤波器
+	Difficulty  *big.Int       `json:"difficulty"       //前一个区块的难度
+	Number      *big.Int       `json:"number"           
+	GasLimit    uint64         `json:"gasLimit"         //当前每个区块的 gas 使用限制值
+	GasUsed     uint64         `json:"gasUsed"          //该区块中用于交易的 gas 消耗值
+	Time        uint64         `json:"timestamp"        //时间戳
+	Extra       []byte         `json:"extraData"        //与该区块相关的 32 字节数据
+	MixDigest   common.Hash    `j
+	// BaseFee was added by EIP-1559 and is ignored in legacy headers.
+	BaseFee *big.Int `json:"baseFeePerGas" rlp:"optional"`
+}
 ```
 
 **Bloom Filter**
@@ -117,8 +134,18 @@ EIP(Ethereum Improvement Proposals)：以太坊改进提案
 
 签名信息格式化展示
 
-```
-bytes32 eip712DomainHash = keccak256(    abi.encode(        keccak256(            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"        ),        keccak256(bytes(name())), // ERC-20 Name        keccak256(bytes("1")),    // Version        chainid(),        address(this)    ));
+```solidity
+bytes32 eip712DomainHash = keccak256(
+    abi.encode(
+        keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+        ),
+        keccak256(bytes(name())), // ERC-20 Name
+        keccak256(bytes("1")),    // Version
+        chainid(),
+        address(this)
+    )
+);
 ```
 
 这样可以确保仅在正确的链ID上将签名用于我们给定的通证合约地址。chainID是在以太坊经典分叉之后引入（以太坊经典network id 依旧为 1）， 用来精确识别在哪一个网络。 可以在此处查看现有[chain ID的列表](https://medium.com/@piyopiyo/list-of-ethereums-major-network-and-chain-ids-2bc58e928508)。

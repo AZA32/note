@@ -1,10 +1,14 @@
 # 以太坊
 
+### 以太坊基本原理
+
+**共识机制**：Ghost
+
 ### MPT
 
 由压缩前缀树 Patricia Tree + 默克尔树 Merkle Tree 组成
 
-![](http://cdn.blocketh.top/img/4.png)
+#### ![img](http://cdn.blocketh.top/img/4.png)
 
 #### 场景
 
@@ -18,38 +22,40 @@
 
 #### 区块头
 
-```go
-type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       //父块keccak哈希
-	UncleHash   common.Hash    `json:"sha3Uncles"       //叔块keccak哈希
-	Coinbase    common.Address `json:"miner"            //
-	Root        common.Hash    `json:"stateRoot"        //世界状态树的根哈希值
-	TxHash      common.Hash    `json:"transactionsRoot" //交易树的根哈希值
-	ReceiptHash common.Hash    `json:"receiptsRoot"     //收据树的根哈希值
-	Bloom       Bloom          `json:"logsBloom"        //事件地址和事件 topic 的布隆滤波器
-	Difficulty  *big.Int       `json:"difficulty"       //前一个区块的难度
-	Number      *big.Int       `json:"number"           
-	GasLimit    uint64         `json:"gasLimit"         //当前每个区块的 gas 使用限制值
-	GasUsed     uint64         `json:"gasUsed"          //该区块中用于交易的 gas 消耗值
-	Time        uint64         `json:"timestamp"        //时间戳
-	Extra       []byte         `json:"extraData"        //与该区块相关的 32 字节数据
-	MixDigest   common.Hash    `j
-	// BaseFee was added by EIP-1559 and is ignored in legacy headers.
-	BaseFee *big.Int `json:"baseFeePerGas" rlp:"optional"`
-}
+```
+type Header struct {    ParentHash  common.Hash    `json:"parentHash"       //父块keccak哈希    UncleHash   common.Hash    `json:"sha3Uncles"       //叔块keccak哈希    Coinbase    common.Address `json:"miner"            //    Root        common.Hash    `json:"stateRoot"        //世界状态树的根哈希值    TxHash      common.Hash    `json:"transactionsRoot" //交易树的根哈希值    ReceiptHash common.Hash    `json:"receiptsRoot"     //收据树的根哈希值    Bloom       Bloom          `json:"logsBloom"        //事件地址和事件 topic 的布隆滤波器    Difficulty  *big.Int       `json:"difficulty"       //前一个区块的难度    Number      *big.Int       `json:"number"               GasLimit    uint64         `json:"gasLimit"         //当前每个区块的 gas 使用限制值    GasUsed     uint64         `json:"gasUsed"          //该区块中用于交易的 gas 消耗值    Time        uint64         `json:"timestamp"        //时间戳    Extra       []byte         `json:"extraData"        //与该区块相关的 32 字节数据    MixDigest   common.Hash    `j    // BaseFee was added by EIP-1559 and is ignored in legacy headers.    BaseFee *big.Int `json:"baseFeePerGas" rlp:"optional"`}
 ```
 
 **Bloom Filter**
 
-当前区块所有交易中 Bloom Filter 的并集，用来判断交易类型是否存在，Solidity 中 Event 事件
+当前区块所有交易（每个交易完成后会产生一个收据，收据中会包含一个Bloom Filter，记录这个交易的类型、地址等其他信息）中 Bloom Filter 的并集，用来判断交易类型是否存在，Solidity 中 Event 事件
 
-#### Receipts
+> 当查找某段时间某个智能合约相关的所有交易:
+>
+> 在区块头中查找是否存在相关的交易类型
+>
+> * 存在：则在区块内部的所有收据里的Bloom Filter中查找。
+> * 不存在：直接查找下个区块。
+
+**Transactions（交易树）**
+
+每发布一个区块，区块中的交易会形成一颗 Merkle Tree，即交易树
+
+**Receipts（收据树）**
+
+每个交易执行完毕后，都会有一个收据，这个收据记录交易的相关信息。每个区块中，所有交易的收据会组织成一颗收据树，与交易树是一一对应的，同样也是 MPT。
+
+**作用**
+
+在以太坊中最重要的功能是加入了智能合约，而智能合约的执行过程比较复杂，收据树的作用是利于系统快速查询执行结果。
 
 ### StateRoot
 
 StateRoot 数据结构是 Merkle Patric Trie(MPT)，叶子节点存储以太坊账户，Key 为以太坊地址（哈希值），value 为账户对象（RLP编码序列化）
 
 #### 账户
+
+**地址生成**
 
 **外部账户** (Externally Owned Account, **EOA** ) 与 **智能合约** (Contract Account, **CA** )。
 
@@ -68,7 +74,7 @@ StateRoot 数据结构是 Merkle Patric Trie(MPT)，叶子节点存储以太坊�
 | 多重签名           | ✖️   | ✔️         |
 | 控制方式           | 私钥控制 | 通过外部账户执行合约 |
 
-![image-20220402142428655](http://cdn.blocketh.top/img/image-20220402142428655.png) ![](http://cdn.blocketh.top/img/image-20220402142428655.png)
+![image-20220402142428655](http://cdn.blocketh.top/img/image-20220402142428655.png)
 
 `stateRoot`叶子节点是账户信息(addr => account)
 
@@ -111,18 +117,8 @@ EIP(Ethereum Improvement Proposals)：以太坊改进提案
 
 签名信息格式化展示
 
-```solidity
-bytes32 eip712DomainHash = keccak256(
-    abi.encode(
-        keccak256(
-            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-        ),
-        keccak256(bytes(name())), // ERC-20 Name
-        keccak256(bytes("1")),    // Version
-        chainid(),
-        address(this)
-    )
-);
+```
+bytes32 eip712DomainHash = keccak256(    abi.encode(        keccak256(            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"        ),        keccak256(bytes(name())), // ERC-20 Name        keccak256(bytes("1")),    // Version        chainid(),        address(this)    ));
 ```
 
 这样可以确保仅在正确的链ID上将签名用于我们给定的通证合约地址。chainID是在以太坊经典分叉之后引入（以太坊经典network id 依旧为 1）， 用来精确识别在哪一个网络。 可以在此处查看现有[chain ID的列表](https://medium.com/@piyopiyo/list-of-ethereums-major-network-and-chain-ids-2bc58e928508)。

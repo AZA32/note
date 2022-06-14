@@ -272,7 +272,7 @@ bytes32 eip712DomainHash = keccak256(
 
 EIP1884 最具争议的变化是`SLOAD`从 200 到 800 的 gas 成本增加
 
-`transfer``send`最初是作为一种减轻[重入漏洞](https://consensys.github.io/smart-contract-best-practices/known\_attacks/#reentrancy)的简单方法而创建的[ 10](https://consensys.github.io/smart-contract-best-practices/known\_attacks/#reentrancy). 虽然他们成功地实现了这一目的，但他们的方法过于严厉，导致了诸如此类的问题。以太坊安全社区的共识是不鼓励使用它们，而是使用[检查-效果-交互来代替 16](https://solidity.readthedocs.io/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern)模式或自定义解决方案，例如我们的[ReentrancyGuard 9](https://docs.openzeppelin.com/contracts/2.x/api/utils#ReentrancyGuard)合同。
+`transfer`、`send`最初是作为一种减轻[重入漏洞](https://consensys.github.io/smart-contract-best-practices/known\_attacks/#reentrancy)的简单方法而创建的[ 10](https://consensys.github.io/smart-contract-best-practices/known\_attacks/#reentrancy). 虽然他们成功地实现了这一目的，但他们的方法过于严厉，导致了诸如此类的问题。以太坊安全社区的共识是不鼓励使用它们，而是使用[检查-效果-交互来代替 16](https://solidity.readthedocs.io/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern)模式或自定义解决方案，例如我们的[ReentrancyGuard 9](https://docs.openzeppelin.com/contracts/2.x/api/utils#ReentrancyGuard)合同。
 
 #### EIP1967
 
@@ -351,11 +351,9 @@ bytes32 private constant implementationPosition = bytes32(uint256(
 * 通过全局注册表（ERC1820）注册监听回调
   * EOA也可以实现回调
 
-### 共识机制
+***
 
-**POW**
-
-### EVM
+### EV M
 
 代码组织结构
 

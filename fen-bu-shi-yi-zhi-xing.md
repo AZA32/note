@@ -54,13 +54,33 @@ CFT共识算法只保证分布式系统中节点发生宕机错误时整个分�
 
 **崩溃恢复**
 
+ZAB协议崩溃恢复要求满足如下2个要求：
+
+1. 确保已经被 Leader 提交的 Proposal 必须最终被所有的 Follower 服务器提交。
+2. 确保丢弃已经被 Leader 提出的但是没有被提交的 Proposal。
+
 **Leader选举**
 
+Zab协议需要保证选举出来的Leader需要满足以下条件：
+
+* 新选举出来的 Leader 不能包含未提交的 Proposal
+* 新选举的 Leader 节点中含有最大的 zxid
+
 **数据同步**
+
+* 完成Leader选举后，在正式开始工作之前（接收事务请求，然后提出新的Proposal），Leader 服务器会首先确认事务日志中的所有的 Proposal 是否已经被集群中过半的服务器Commit。
+* Leader 服务器需要确保所有的 Follower 服务器能够接收到每一条事务的 Proposal，并且能将所有已经提交的事务 Proposal 应用到内存数据中。等到 Follower 将所有尚未同步的事务Proposal 都从Leader 服务器上同步过， 并且应用到内存数据中以后 ，Leader才会把该Follower加入到真正可用的Follower列表中。
 
 **原子广播**
 
 当集群通讯正常时如何进行数据广播
+
+1. 户端发起一个写操作请求。
+2. Leader 服务器将客户端的请求转化为事务 Proposal 提案，同时为每个 Proposal 分配一个全局的ID，即zxid。
+3. Leader 服务器为每个 Follower 服务器分配一个单独的队列，然后将需要广播的 Proposal 依次放到队列中取，并且根据 FIFO 策略进行消息发送。
+4. Follower 接收到 Proposal 后，会首先将其以事务日志的方式写入本地磁盘中，写入成功后向 Leader 反馈一个 Ack 响应消息。
+5. Leader 接收到超过半数以上 Follower 的 Ack 响应消息后，即认为消息发送成功，可以发送 commit 消息。
+6. Leader 向所有 Follower 广播 commit 消息，同时自身也会完成事务提交。Follower 接收到 commit 消息后，会将上一条事务提交。
 
 #### BFT
 
@@ -86,13 +106,19 @@ CFT共识算法只保证分布式系统中节点发生宕机错误时整个分�
 
 **缺点**
 
+* 浪费资源
+
 **POS**
 
-权益证明
+权益证明，拥有的股份越多，话语权就越强，获得记账机会的概率就越大
 
 **优点**
 
+* 高效
+
 **缺点**
+
+* 富者越富
 
 **DPoS**
 

@@ -4,7 +4,9 @@
 
 ​ solidity是一种静态类型、面向合约的语言
 
-#### 类型
+#### 变量
+
+**数据类型**
 
 **值类型**
 
@@ -109,21 +111,21 @@ delete Todo;//将重置结构体的所有成员
 mapping(address => uint) balances
 ```
 
-#### 变量类型
+**变量类型**
 
 Solidity 中有 3 种类型的变量
 
-**local**
+**局部变量**
 
 * 在函数内部声明
 * 不存储在区块链上
 
-**state**
+**状态变量**
 
 * 在函数外声明
 * 存储在区块链上
 
-**global（提供有关区块链的信息）**
+**全局变量**
 
 **区块相关**
 
@@ -135,9 +137,13 @@ Solidity 中有 3 种类型的变量
 * **uint = block.timestamp**：当前区块的时间戳（从Uinx epoch开始的秒数）
 * **tx.origin(address payable)**：最初的调用者地址
 
-**abi编码**
+**ABI编码**
 
-1. 函数选择器(Function Selector)
+函数选择器(Function Selector)
+
+```
+abi.encodeWithSelector() = bytes4(keccak256("functionName(paramType)"))
+```
 
 一个函数调用数据的前 4 字节，指定了要调用的函数, 函数名称和参数类型 Keccak 哈希的前 4 字节，获取方式函数名称.selectorbytes4(keccak256(bytes("函数名称(参数类型)"))。
 
@@ -196,13 +202,13 @@ Solidity 中有 3 种类型的变量
 
 **地址相关**
 
-**转账**
+转账
 
 * `<address>.balance`：给定地址的账户余额（以Wei为单位）。
 * `<address>.transfer(uint256)`：向给定地址转账若干Wei的以太币，仅附加2300 gas，失败时直接抛出异常。
 * `<address>.send(uint256)`：像给定地址转账若干Wei的以太币，仅附加2300 gas，转账出错不会抛出异常，只返回`true`/`false`，后面代码继续执行。可以在批量转账中使用。
 
-**合约调用**
+合约调用
 
 * `<address>.call{gas:}(bytes memory)`：向给定地址发起消息调用，附加可用gas，转账出错不会抛出异常，只返回`true`/`false`，后面代码继续执行，容易发生重入攻击。
 * `<address>.callcode(bytes memory)`：等价于`call`，但保持执行上下文；即从目标地址获取相应的合约函数代码到当前合约的上下文执行；已不推荐使用，未来会移除。
@@ -277,13 +283,11 @@ modifier可以被重写，需要被重写的修改器也需要使用 `virtual` �
 ```solidity
 pragma solidity >=0.7.0 <0.9.0;
 
-contract Base
-{
+contract Base{
     modifier foo() virtual {_;}
 }
 
-contract Inherited is Base
-{
+contract Inherited is Base{
     modifier foo() override {_;}
 }
 ```
@@ -293,18 +297,15 @@ contract Inherited is Base
 ```
 pragma solidity >=0.7.0 <0.9.0;
 
-contract Base1
-{
+contract Base1{
     modifier foo() virtual {_;}
 }
 
-contract Base2
-{
+contract Base2{
     modifier foo() virtual {_;}
 }
 
-contract Inherited is Base1, Base2
-{
+contract Inherited is Base1, Base2{
     modifier foo() override(Base1, Base2) {_;}
 }
 ```
@@ -359,6 +360,10 @@ Topics\[0]：事件名称及其参数类型\*(uint256，string等)\***签名**([
 
 **使用create创建合约**
 
+```go
+contractAddr = Keccak256(rlp.EncodeToBytes([]interface{}{caller.Address(), nonce})[12:]
+```
+
 * 地址是由创建者地址和每次创建合约交易时的计数器(nonce)来计算合约的地址
 
 ​ new关键字将部署该合约的新实例并返回合约地址。
@@ -366,6 +371,10 @@ Topics\[0]：事件名称及其参数类型\*(uint256，string等)\***签名**([
 ​ 成本较高，`CREATE`操作码目前的Gas成本为32000
 
 **通过create2创建**
+
+```go
+contractAddr = (0xff ++ msg.sender ++ salt ++ keccak256(init_code))[12:]
+```
 
 * Create2 uses sha3(0xff ++ msg.sender ++ salt + sha3(init\_code))
 * 合约的地址是由根据给定的salt，创建合约的字节码和构造函数参数来计算
@@ -881,4 +890,141 @@ event.watch(function(error,result){
 		console.log(result)
 	}
 })
+```
+
+***
+
+### Ethers
+
+#### 链接外部库
+
+```javascript
+constant exLib = await ethers.getContractFactory("Library");
+constant lib = await exLib.deploy();
+await lib.deployed();
+await ethers.getContractFactory("",{
+	libraries:{
+		Library:lib.address
+	}
+})
+```
+
+#### 监听事件
+
+```javascript
+filter = {
+	address:"",
+	topics:{
+		ethers.utils.id("eventName(type)")
+	}
+}
+ethers.provider.on(filter,(log)=>{
+	console.log(log)
+})
+```
+
+***
+
+### Harhat
+
+#### 构建
+
+引入开发依赖：
+
+```
+npm i -D  hardhat
+```
+
+在当前项目创建hardhat模板项目：\`
+
+```
+npx hardhat
+```
+
+安装hardhat相关插件：
+
+```
+npm install --save-dev @nomiclabs/hardhat-waffle ethereum-waffle chai @nomiclabs/hardhat-ethers ethers
+```
+
+运行hardhat本地节点：
+
+```
+npx hardhat node
+```
+
+编译
+
+```
+npx hardhat compile
+```
+
+想将 Hardhat的脚本运行在本地测试节点，只需使用`--network localhost`：
+
+```
+npx hardhat run scripts/sample-script.js --network localhost
+```
+
+#### Openzeppelin
+
+```
+npm install @openzeppelin/contracts
+```
+
+#### TypeScript支持
+
+引入TypeScript：
+
+```
+npm install --save-dev ts-node typescript
+```
+
+引入测试包：
+
+```
+npm install --save-dev chai @types/node @types/mocha @types/chai
+```
+
+重新命名hardhat.config.js`为`hardhat.config.ts
+
+```
+mv hardhat.config.js hardhat.config.ts
+```
+
+创建[`tsconfig.json`](https://www.typescriptlang.org/docs/handbook/tsconfig-json.html)
+
+```
+{
+  "compilerOptions": {
+    "target": "es2018",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "dist"
+  },
+  "include": ["./scripts", "./test"],
+  "files": ["./hardhat.config.ts"]
+}
+```
+
+#### 验证Etherscan合同
+
+```
+npm install --save-dev @nomiclabs/hardhat-etherscan
+```
+
+并将以下语句添加到您的`hardhat.config.js`：
+
+```
+require("@nomiclabs/hardhat-etherscan");
+```
+
+或者，如果您使用的是 TypeScript，请将其添加到您的`hardhat.config.ts`：
+
+```
+import "@nomiclabs/hardhat-etherscan";
+```
+
+```javascript
+npx hardhat flatten contracts/.sol >> .sol
 ```

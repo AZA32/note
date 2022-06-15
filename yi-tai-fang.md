@@ -78,6 +78,33 @@ stateRoot 结构为MPT，叶子节点存储以太坊账户(addr => account)，Ke
     > 合约状态中的任意一项细微变动都最终引起**stateRoot**的变化
 * **codeHash** ：代码哈希值，指向智能合约账户存储的智能合约代码（存储区的内容通过散列函数得出校验哈希值）
 
+**地址生成方式**：
+
+*   create
+
+    ```go
+    // Create creates a new contract using code as deployment code.
+    func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+    	contractAddr = crypto.CreateAddress(caller.Address(), evm.StateDB.GetNonce(caller.Address()))
+    	return evm.create(caller, &codeAndHash{code: code}, gas, value, contractAddr, CREATE)
+    }
+    ```
+*   create2
+
+    > Create2 uses keccak256(0xff ++ msg.sender ++ salt ++ keccak256(init\_code))\[12:]
+
+    ```go
+    // Create2 creates a new contract using code as deployment code.
+    //
+    // The different between Create2 with Create is Create2 uses keccak256(0xff ++ msg.sender ++ salt ++ keccak256(init_code))[12:]
+    // instead of the usual sender-and-nonce-hash as the address where the contract is initialized at.
+    func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, endowment *big.Int, salt *uint256.Int) (ret []byte, contractAddr common.Address, leftOverGas uint64, err error) {
+    	codeAndHash := &codeAndHash{code: code}
+    	contractAddr = crypto.CreateAddress2(caller.Address(), salt.Bytes32(), codeAndHash.Hash().Bytes())
+    	return evm.create(caller, codeAndHash, gas, endowment, contractAddr, CREATE2)
+    }
+    ```
+
 **Bloom Filter**
 
 当前区块所有交易（每个交易完成后会产生一个收据，收据中会包含一个Bloom Filter，记录这个交易的类型、地址等其他信息）中 Bloom Filter 的并集，用来判断交易类型是否存在，Solidity 中 Event 事件
@@ -222,6 +249,28 @@ $$
 
 #### 预编译合约
 
+#### 代码组织结构
+
+* core
+  * state\_process.go：EVM入口函数
+  * state\_transition.go：调用EVM前的准备
+* core/vm
+  * analysis.go：实现了合约代码扫描检测的工具函数
+  * common.go：实现了一些公用的辅助函数
+  * contract.go：实现了`contract`这个重要的结构和方法
+  * contracts.go：实现了主要预编译合约
+  * evm.go：实现了evm虚拟机的结构定义和相关的重要方法
+  * gas\_table.go：实现了各类不同指令所需要的动态计算gasg的方法
+  * instructions.go：实现了各类指令的实际执行代码
+  * interface.go：定义了StatDB接口和Callcontext接口
+  * interpreter.go：实现了Opcode解释器
+  * jump\_table.go：非常重要的lookup table，针对每一个具体的opCode。分别指向gas\_table和instructions的具体实现。解释器直接会根据opCode来进行查找
+  * memory.go：实现了evm的临时memory存储
+  * opcodes.go：定义了所有的opCode以及其和字符串的映射表
+  * stack.go：evm中所用到栈的实现。
+* params/
+  * protocol\_params.go：定义了各个不同代际的evm各类操作的gas费用标准。
+
 ### EIP
 
 EIP(Ethereum Improvement Proposals)：以太坊改进提案
@@ -293,9 +342,9 @@ bytes32 private constant implementationPosition = bytes32(uint256(
 * 链下进行签名，签名信息在执行转账交易时提交到链上，授权和转账在一笔交易里完成
 * 转账可以交给第三方来提交，避免ERC20交易需要ETH来提供手续费
 
-### ERC
+#### ERC
 
-#### ERC20
+**ERC20**
 
 **问题**：
 
@@ -304,7 +353,7 @@ bytes32 private constant implementationPosition = bytes32(uint256(
   * 依赖`approve`
   * 误转合约被锁死
 
-#### ERC721
+**ERC721**
 
 *   所有权查询
 
@@ -341,38 +390,20 @@ bytes32 private constant implementationPosition = bytes32(uint256(
       isApprovedForAll(address _owner,address _operator)
       ```
 
-#### ERC165
+**ERC165**
 
 在合约中增加一个标准，检测是否支持某一个方法
 
-#### ERC777
+**ERC777**
 
 * `send(dest,vale,data)`：data（额外的信息）
 * 通过全局注册表（ERC1820）注册监听回调
   * EOA也可以实现回调
 
-***
+**ERC2612**
 
-### EV M
+链下签名，链上验证
 
-代码组织结构
+**场景**
 
-* core
-  * state\_process.go：EVM入口函数
-  * state\_transition.go：调用EVM前的准备
-* core/vm
-  * analysis.go：实现了合约代码扫描检测的工具函数
-  * common.go：实现了一些公用的辅助函数
-  * contract.go：实现了`contract`这个重要的结构和方法
-  * contracts.go：实现了主要预编译合约
-  * evm.go：实现了evm虚拟机的结构定义和相关的重要方法
-  * gas\_table.go：实现了各类不同指令所需要的动态计算gasg的方法
-  * instructions.go：实现了各类指令的实际执行代码
-  * interface.go：定义了StatDB接口和Callcontext接口
-  * interpreter.go：实现了Opcode解释器
-  * jump\_table.go：非常重要的lookup table，针对每一个具体的opCode。分别指向gas\_table和instructions的具体实现。解释器直接会根据opCode来进行查找
-  * memory.go：实现了evm的临时memory存储
-  * opcodes.go：定义了所有的opCode以及其和字符串的映射表
-  * stack.go：evm中所用到栈的实现。
-* params/
-  * protocol\_params.go：定义了各个不同代际的evm各类操作的gas费用标准。
+Uni LP

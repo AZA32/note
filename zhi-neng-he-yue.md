@@ -344,7 +344,7 @@ event Deposit{
 }
 ```
 
-每条事件记录包含'主题(topic)'和'数据'，主题为32位字节，LOG0-LOG4（操作码）。indexed声明可以视为主题，一个事件中可索引的参数数量最多为三个。
+每条事件记录包含主题（**topic**）和数据（data），主题为32位字节，LOG0-LOG4（操作码）。**indexed**声明可以视为主题，一个事件中可索引（**indexed**）的参数数量最多为三个，非**indexed**。
 
 Topics\[0]：事件名称及其参数类型\*(uint256，string等)\***签名**([keccak256](https://en.wikipedia.org/wiki/SHA-3)哈希)
 
@@ -881,7 +881,28 @@ var contractInstance = contract.at(address);
 var contractInstance = contract.new();
 ```
 
-#### 合约事件过滤
+#### 合约事件
+
+**实时监听（使用websocket连接）**
+
+```javascript
+let contract = new ethers.Contract(address,ABI,provider);
+let filter = contract.filters.eventName();
+wssprovider.on(filter,(log) => {
+	console.log(log)
+})
+```
+
+**获取历史事件**
+
+```javascript
+let contract = new ethers.Contract(address,ABI,provider);
+let filter = contract.filters.eventName();
+filter.fromBlock = 
+filter.toBlock = 
+let logs = await provider.getLogs(filter);
+let logs = await contract.queryFilter(filterTo,-10,"latest");
+```
 
 ```javascript
 var event = contractInstance.event();
@@ -909,7 +930,27 @@ await ethers.getContractFactory("",{
 })
 ```
 
-#### 监听事件
+#### 事件
+
+**获取历史事件**
+
+```
+let contract = new ethers.Contract(address,ABI,provider);
+let filter = contract.filters.eventName()
+filter.fromBlock=1000;
+filter.toBlock=2000;//latest
+let logs = await provider.getLogs(filter)
+let logs = await contract.queryFilter(filterTo,-10,"latest")
+```
+
+**解析事件**
+
+```javascript
+const TransferEvent = new ethers.utils.Interface(["event Transfer(address indexed from,address indexed to,uint256 value)"]);
+const data = Transfer.parseLog(logs[i]);
+console.log("from:"+data.args.from)
+console.log("from"+data.args.to)
+```
 
 ```javascript
 filter = {
@@ -1027,4 +1068,30 @@ import "@nomiclabs/hardhat-etherscan";
 
 ```javascript
 npx hardhat flatten contracts/.sol >> .sol
+```
+
+### Graph
+
+#### 安装工具
+
+```shell
+npm install -g @graphprotocol/graph-cli
+```
+
+#### 初始化子图
+
+```shell
+graph init --studio <SUBGRAPH_SLUG>
+```
+
+#### 验证
+
+```shell
+graph auth --studio <DEPLOY_KEY>
+```
+
+#### 部署
+
+```shell
+graph deploy
 ```

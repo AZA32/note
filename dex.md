@@ -4,7 +4,7 @@ Dex主要分为两类：订单簿、兑换池
 
 ### 兑换池
 
-#### uniswap v2
+#### Uniswap v2
 
 AMM：AutoMated Market Maker
 

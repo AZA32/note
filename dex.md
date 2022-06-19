@@ -83,6 +83,89 @@ $$
 TWAP = (priceCumulative2 - priceCumulative1) / (timestamp2 - timestamp1)
 $$
 
+#### Sushiswap
+
+**流动性挖矿**
+
+在流动性提供者之间公平地分配代币，并且随着时间的推移线性分配——比如说，以 R 每秒
+
+池切割成单秒时间片。对于这些切片中的每一个，给定的流动性提供者应该收到
+
+$$
+R\cdot \frac{l(t)}{L(t)}
+$$
+
+> R：单位时间内分配池子的代币总量
+>
+> l(t)：t时刻流动性提供者提供的流动性代币余额
+>
+> L(t)：t时刻该池的质押流动性总量t
+
+奖励从t0至t1将是他们每一秒的奖励总和：
+
+$$
+\sum_{t=t_0}^{t_1} R\cdot \frac{l(t)}{L(t)}
+$$
+
+如果用户的余额在这段时间内保持不变，则上述公式可以简化为：
+
+$$
+R\cdot l \cdot \sum_{t=t_0}^{t_1}\frac{1}{L(t)}
+$$
+
+然后再将从t0到t1的时间段可以拆分成\[0,t0],\[0,t1]两个时间段之差，公式可变形为：
+
+$$
+R\cdot l \cdot(\sum_{t=0}^{t_1} \frac{1}{L(t)}-\sum_{t=0}^{t_0}\frac{1}{L(t)})
+$$
+
+MasterChefV2合约中质押、提取、收割都会调用updatePool函数进行更新当前池子的accSushiPerShare
+
+```solidity
+if (lpSupply > 0) {
+    uint256 blocks = block.number.sub(pool.lastRewardBlock);
+    uint256 sushiReward = blocks.mul(sushiPerBlock()).mul(pool.allocPoint) / totalAllocPoint;
+    pool.accSushiPerShare = pool.accSushiPerShare.add((sushiReward.mul(ACC_SUSHI_PRECISION) / lpSupply).to128());
+}
+```
+
+$$
+R = sushiReward
+$$
+
+$$
+L(t) = lpSupply
+$$
+
+$$
+accSushiPerShare = R \cdot \sum_{t=0}^{t_1}\frac{1}{L(t)}
+$$
+
+质押时计算公式，用户提供流动性的那一个时刻为t(0)
+
+```solidity
+user.rewardDebt = user.rewardDebt.add(int256(amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION));
+```
+
+$$
+l = amount
+$$
+
+$$
+rewardDebt = l \cdot accSushiPerShare = l \cdot R \cdot \sum_{t=0}^{t_0}\frac{1}{L(t)}
+$$
+
+收取时时间为t(1)
+
+```solidity
+int256 accumulatedSushi = int256(user.amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION);
+uint256 _pendingSushi = accumulatedSushi.sub(user.rewardDebt).toUInt256();
+```
+
+$$
+Reward_{alice}=l\cdot(R\cdot\sum_{t=0}^{t_1}\frac{1}{L(t)}-R\cdot\sum_{t=0}^{t_0}\frac{1}{L(t)}) = l\cdot accSushiPerShare - rewardDebt
+$$
+
 ### 订单簿
 
 以0x协议为代表，订单链下撮合、链上结算

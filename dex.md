@@ -4,7 +4,9 @@ Dex主要分为两类：订单簿、兑换池
 
 ### 兑换池
 
-#### Uniswap v2
+#### Uniswap
+
+**V2**
 
 AMM：AutoMated Market Maker
 
@@ -69,9 +71,7 @@ $$
 
 > 添加流动性凭证，撤出token0、token1
 
-**TWAP**
-
-时间加权价格
+**TWAP（时间加权价格）**
 
 price0CumulativeLast、price1CumulativeLast 记录 token 的累加价格
 
@@ -119,6 +119,8 @@ $$
 R\cdot l \cdot(\sum_{t=0}^{t_1} \frac{1}{L(t)}-\sum_{t=0}^{t_0}\frac{1}{L(t)})
 $$
 
+**accSushiPerShare（单位份额奖励）**
+
 MasterChefV2合约中质押、提取、收割都会调用updatePool函数进行更新当前池子的accSushiPerShare
 
 ```solidity
@@ -141,6 +143,8 @@ $$
 accSushiPerShare = R \cdot \sum_{t=0}^{t_1}\frac{1}{L(t)}
 $$
 
+**rewardDebt（用户已奖励）**
+
 质押时计算公式，用户提供流动性的那一个时刻为t(0)
 
 ```solidity
@@ -155,7 +159,9 @@ $$
 rewardDebt = l \cdot accSushiPerShare = l \cdot R \cdot \sum_{t=0}^{t_0}\frac{1}{L(t)}
 $$
 
-收取时时间为t(1)
+**\_pendingSushi（奖励）**
+
+收取时时间为t1
 
 ```solidity
 int256 accumulatedSushi = int256(user.amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION);
@@ -163,7 +169,7 @@ uint256 _pendingSushi = accumulatedSushi.sub(user.rewardDebt).toUInt256();
 ```
 
 $$
-Reward_{alice}=l\cdot(R\cdot\sum_{t=0}^{t_1}\frac{1}{L(t)}-R\cdot\sum_{t=0}^{t_0}\frac{1}{L(t)}) = l\cdot accSushiPerShare - rewardDebt
+Reward=l\cdot accSushiPerShare - rewardDebt=l\cdot(R\cdot\sum_{t=0}^{t_1}\frac{1}{L(t)}-R\cdot\sum_{t=0}^{t_0}\frac{1}{L(t)})
 $$
 
 ### 订单簿

@@ -25,17 +25,30 @@ $$
 
 资金利用率是针对一个资金池的，不是针对用户
 
-**cToken**
 
-用户存款后会得到cToken，作为存款凭证（生息代币），每种标的资产对于一种cToken，如：ETH - cETH，DAI - cDAI
-
-Token - cToken兑换率：exchange = (totalCash + totalBorrows - totalReserves) / totalSupply
-
-归还时，归还cToken，返回token，包括本金 + 利息，cToken会被销毁
 
 **利率模型**
 
-**直线型**
+利率模型的抽象合约
+
+```mermaid
+classDiagram
+	InterestRateModel <|-- InterestRateModelHarness
+	InterestRateModel <|-- JumpRateModel
+	InterestRateModel <|-- WhitePaperInterestRateModel
+	InterestRateModel <|-- JumpRateModelV2
+	BaseJumpRateModelV2 <|-- JumpRateModelV2
+	JumpRateModelV2 <|-- DAIInterestRateModelV3
+	class InterestRateModel{
+		+ constant isInterestRateModel = true
+		+getBorrowRate(uint cash, uint borrows, uint reserves)
+		+getSupplyRate(uint cash, uint borrows, uint reserves, uint reserveFactorMantissa)
+	}
+```
+
+**WhitePaperInterestRateModel**
+
+直线型利率模型
 
 计算公式：
 
@@ -57,7 +70,7 @@ constructor(uint baseRatePerYear, uint multiplierPerYear) public {
 * **baseRatePerYear**：基准年利率，公式中的 b
 * **multiplierPerYear**：斜率 k 值
 
-**资金利用率**：
+**资金利用率**
 
 ```solidity
 function utilizationRate(uint cash, uint borrows, uint reserves) public pure returns (uint) {
@@ -73,7 +86,7 @@ $$
 U_a=\frac{Borrows_a（总借款）}{(Cash_a（资金池余额）+Borrows_a（总借款）-reserves（储备金）)}
 $$
 
-**借款利率**：
+**借款利率**
 
 ```solidity
 function getBorrowRate(uint cash, uint borrows, uint reserves) override public view returns (uint) {
@@ -86,7 +99,7 @@ $$
 Borrowing Interest Ratea = U_a \cdot k + b
 $$
 
-**存款利率**：
+**存款利率**
 
 ```solidity
 function getSupplyRate(uint cash, uint borrows, uint reserves, uint reserveFactorMantissa) override public view returns (uint) {
@@ -113,7 +126,9 @@ $$
 存款利率 = z = 0.025 \cdot x + 0.2x \cdot x
 $$
 
-**拐点型**
+**BaseJumpRateModelV2**
+
+拐点型
 
 当资金利用率小于`klink`（应用跳跃乘数的利用点），利率公式和直线型的一样
 
@@ -121,6 +136,55 @@ $$
 
 $$
 y = k2 \cdot (x - p) + (k \cdot p + b)
+$$
+
+```solidity
+//每年区块数
+uint public constant blocksPerYear = 2102400;
+```
+
+利率模型假设的每年的大致区块数，一年31536000 秒，平均15秒一区块
+
+$$
+\frac{31536000_s}{15_s/块} = 2102400块/年
+$$
+
+**baseRatePerYear**：
+
+**multiplierPerYear**：
+
+```solidity
+constructor(uint baseRatePerYear, uint multiplierPerYear, uint jumpMultiplierPerYear, uint kink_, address owner_) internal {
+        owner = owner_;
+        updateJumpRateModelInternal(baseRatePerYear,  multiplierPerYear, jumpMultiplierPerYear, kink_);
+}
+```
+
+**b值 （baseRatePerBlock）**：每区块的基础利率
+
+**p值（multiplierPerBlock）**：每区块斜率
+
+```solidity
+function updateJumpRateModelInternal(uint baseRatePerYear, uint multiplierPerYear, uint jumpMultiplierPerYear, uint kink_) internal {
+    baseRatePerBlock = baseRatePerYear / blocksPerYear;
+    multiplierPerBlock = (multiplierPerYear * BASE) / (blocksPerYear * kink_);
+    jumpMultiplierPerBlock = jumpMultiplierPerYear / blocksPerYear;
+    kink = kink_;
+}
+```
+
+**借款利率**
+
+$$
+normalRate = k \cdot p +b
+$$
+
+$$
+excessUtil = U_a - k
+$$
+
+$$
+Borrowing Interest Ratea = k2 \cdot (U_a - k) + (k \cdot p + b)
 $$
 
 ```solidity
@@ -136,32 +200,20 @@ function getBorrowRateInternal(uint cash, uint borrows, uint reserves) internal 
 }
 ```
 
-**借款利率**：
+**存款利率**
 
-$$
-Borrowing Interest Ratea = (U_a - klink) \cdot ( + 0.25) + klink \cdot 0.2;
-$$
-
-**代码模块**
-
-**InterestRateModel**
-
-利率模型的抽象合约
-
-```mermaid
-classDiagram
-	InterestRateModel <|-- InterestRateModelHarness
-	InterestRateModel <|-- JumpRateModel
-	InterestRateModel <|-- WhitePaperInterestRateModel
-	InterestRateModel <|-- JumpRateModelV2
-	BaseJumpRateModelV2 <|-- JumpRateModelV2
-	JumpRateModelV2 <|-- DAIInterestRateModelV3
-	class InterestRateModel{
-		+ constant isInterestRateModel = true
-		+getBorrowRate(uint cash, uint borrows, uint reserves)
-		+getSupplyRate(uint cash, uint borrows, uint reserves, uint reserveFactorMantissa)
-	}
+```solidity
+function getSupplyRate(uint cash, uint borrows, uint reserves, uint reserveFactorMantissa) virtual override public view returns (uint) {
+        uint oneMinusReserveFactor = BASE - reserveFactorMantissa;
+        uint borrowRate = getBorrowRateInternal(cash, borrows, reserves);
+        uint rateToPool = borrowRate * oneMinusReserveFactor / BASE;
+        return utilizationRate(cash, borrows, reserves) * rateToPool / BASE;
+}
 ```
+
+$$
+Supply Interest Rate_a = U_a \cdot Borrowing Interest Ratea \cdot (1 - reserveFactorMantissa)
+$$
 
 **Comptroller**
 
@@ -185,6 +237,12 @@ classDiagram
 ```
 
 **CToken**
+
+用户存款后会得到CToken，作为存款凭证（生息代币），每种标的资产对于一种CToken，如：ETH - cETH
+
+Token - cToken兑换率：exchange = (totalCash + totalBorrows - totalReserves) / totalSupply
+
+归还时，归还cToken，返回token，包括本金 + 利息，cToken会被销毁
 
 ```mermaid
 classDiagram

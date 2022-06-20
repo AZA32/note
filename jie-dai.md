@@ -43,6 +43,20 @@ $$
 y = k \cdot x + b
 $$
 
+
+
+```solidity
+constructor(uint baseRatePerYear, uint multiplierPerYear) public {
+	baseRatePerBlock = baseRatePerYear / blocksPerYear;
+	multiplierPerBlock = multiplierPerYear / blocksPerYear;
+
+	emit NewInterestParams(baseRatePerBlock, multiplierPerBlock);
+}
+```
+
+* **baseRatePerYear**：基准年利率，公式中的 b
+* **multiplierPerYear**：斜率 k 值
+
 **资金利用率**：
 
 ```solidity
@@ -69,7 +83,7 @@ function getBorrowRate(uint cash, uint borrows, uint reserves) override public v
 ```
 
 $$
-Borrowing Interest Ratea = 0.25 + U_a \cdot 0.2
+Borrowing Interest Ratea = U_a \cdot k + b
 $$
 
 **存款利率**：
@@ -84,10 +98,12 @@ function getSupplyRate(uint cash, uint borrows, uint reserves, uint reserveFacto
 ```
 
 $$
-Supply Interest Rate_a = Borrowing Interest Rate_a \cdot U_a
+Supply Interest Rate_a = U_a \cdot Borrowing Interest Ratea \cdot (1 - reserveFactorMantissa（储备金率）)
 $$
 
-当资金利用率 = x
+$$
+资金利用率 = x
+$$
 
 $$
 贷款利率 = y = 0.025 + 0.2 \cdot x
@@ -99,7 +115,13 @@ $$
 
 **拐点型**
 
-当资金利用率小于`klink`（应用跳跃乘数的利用点），利率公式和直线型的一样：
+当资金利用率小于`klink`（应用跳跃乘数的利用点），利率公式和直线型的一样
+
+而超过拐点之后，则利率公式将变成：
+
+$$
+y = k2 \cdot (x - p) + (k \cdot p + b)
+$$
 
 ```solidity
 function getBorrowRateInternal(uint cash, uint borrows, uint reserves) internal view returns (uint) {
